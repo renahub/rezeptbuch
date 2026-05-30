@@ -1,0 +1,10 @@
+[run]
+source = core
+omit =
+    */migrations/*
+    */tests/*
+    core/admin.py
+
+[report]
+show_missing = True
+skip_covered = False

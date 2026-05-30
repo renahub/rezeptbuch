@@ -1,0 +1,202 @@
+{% extends "core/base.html" %}
+{% load static %}
+{% block content %}
+
+<div class="container my-4">
+    <h2>Rezept bearbeiten: {{ recipe.name }}</h2>
+
+    <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        {{ form.non_field_errors }}
+
+        <!-- Hauptformular -->
+
+        <!-- Rezeptfelder -->
+         <h4>{{ form.name.label}}</h4>
+        <div class="mb-3">
+            {{ form.name }}
+        </div>
+
+        <h4>{{ form.servings.label }}</h4>
+        <div class="mb-3">
+            {{ form.servings }}
+        </div>
+
+        <hr>
+
+        <!-- Zutaten -->
+        <h4>Zutaten</h4>
+
+        {{ formset.management_form }}
+        <div class="table-responsive">
+        <table id="ingredient-table" class="table table-bordered table-sm">
+            <thead>
+                <tr>
+                    <th>Bestehende Zutat</th>
+                    <th>Neue Zutat</th>
+                    <th>Menge</th>
+                    <th>Einheit</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for subform in formset %}
+                <tr>
+                    <td style="display:none;">{{ subform.id }}</td>
+                    <td>{{ subform.ingredient }}</td>
+                    <td>{{ subform.new_ingredient }}</td>
+                    <td>{{ subform.amount }}</td>
+                    <td>{{ subform.unit }}</td>
+                    <td>
+                    <div style="display:none;">{{ subform.DELETE }}</div>
+                     <button type="button" class="remove-row btn btn-danger">
+                        -
+                    </button>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        </div>
+        <!-- Vorlage für neue Zeilen -->
+        <table style="display:none">
+            <tbody id="empty-form-template">
+                <tr>
+                    <td>{{ formset.empty_form.ingredient }}</td>
+                    <td>{{ formset.empty_form.new_ingredient }}</td>
+                    <td>{{ formset.empty_form.amount }}</td>
+                    <td>{{ formset.empty_form.unit }}</td>
+                    <td>
+                        <div style="display:none;">{{ formset.empty_form.DELETE }}</div>
+                        <button type="button" class="remove-row btn btn-danger">
+                            -
+                        </button>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+
+        <button type="button" id="add-row" class="btn btn-primary">
+            + Zutat hinzufügen
+        </button>
+
+        <hr>
+
+        <!-- Restliches Rezeptformular -->
+        <h4>{{ form.instructions.label }}</h4>
+
+        <div class="mb-3">
+            {{ form.instructions }}
+        </div>
+        <h4>{{ form.preparation_length.label }}</h4>
+        <div class="mb-3">
+            {{ form.preparation_length }}
+        </div>
+
+        <!-- Bilder -->
+        <h4>Bilder</h4>
+        {{ image_formset.management_form }}
+        <div id="image-formset-container">
+            {% for imgform in image_formset %}
+            <div class="image-form-row d-flex align-items-center gap-2 mb-2 p-2 border rounded">
+                {{ imgform.id }}
+                {% if imgform.instance.pk %}
+                <img src="{{ imgform.instance.image.url }}"
+                     style="height: 60px; width: 80px; object-fit: cover;"
+                     class="rounded flex-shrink-0">
+                {% endif %}
+                <div class="flex-grow-1">{{ imgform.image }}</div>
+                <div class="form-check text-nowrap">
+                    {{ imgform.is_title }}
+                    <label class="form-check-label ms-1">Titelbild</label>
+                </div>
+                <div style="display:none;">{{ imgform.DELETE }}</div>
+                <button type="button" class="btn btn-link p-0 text-danger remove-image-row" title="Entfernen">
+                    <i class="bi bi-trash"></i>
+                </button>
+            </div>
+            {% endfor %}
+        </div>
+        <div style="display:none;" id="empty-image-template">
+            <div class="image-form-row d-flex align-items-center gap-2 mb-2 p-2 border rounded">
+                {{ image_formset.empty_form.id }}
+                <div class="flex-grow-1">{{ image_formset.empty_form.image }}</div>
+                <div class="form-check text-nowrap">
+                    {{ image_formset.empty_form.is_title }}
+                    <label class="form-check-label ms-1">Titelbild</label>
+                </div>
+                <div style="display:none;">{{ image_formset.empty_form.DELETE }}</div>
+                <button type="button" class="btn btn-link p-0 text-danger remove-image-row" title="Entfernen">
+                    <i class="bi bi-trash"></i>
+                </button>
+            </div>
+        </div>
+        <button type="button" id="add-image-row" class="btn btn-secondary btn-sm mb-3">
+            <i class="bi bi-plus-lg me-1"></i> Bild hinzufügen
+        </button>
+
+        <!-- Kategorien -->
+        <h4>Kategorien</h4>
+        {{ category_formset.management_form }}
+        <div class="table-responsive">
+        <table id="category-table" class="table table-bordered table-sm">
+            <thead>
+                <tr>
+                    <th>Bestehende Kategorie</th>
+                    <th>Neue Kategorie</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for catform in category_formset %}
+                <tr>
+                    <td>{{ catform.category }}</td>
+                    <td>{{ catform.new_category }}</td>
+                    <td>
+                        <div style="display:none;">{{ catform.DELETE }}</div>
+                        <button type="button" class="remove-cat-row btn btn-danger">
+                            -
+                        </button>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        </div>
+
+        <!-- Vorlage für neue Kategorie-Zeilen -->
+        <table style="display:none">
+            <tbody id="empty-category-template">
+                <tr>
+                    <td>{{ category_formset.empty_form.category }}</td>
+                    <td>{{ category_formset.empty_form.new_category }}</td>
+                    <td>
+                        <div style="display:none;">{{ category_formset.empty_form.DELETE }}</div>
+                        <button type="button" class="remove-cat-row btn btn-danger">
+                            -</button>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+
+        <button type="button"
+                id="add-cat-row"
+                class="btn btn-primary">
+                + Kategorie hinzufügen
+        </button>
+
+        <h4>{{ form.rating.label }}</h4>
+        <div class="mb-3">
+            {{ form.rating }}
+        </div>
+
+        <button type="submit" class="btn btn-success">
+            Änderungen speichern
+        </button>
+        <a href="{% url 'core:recipe' recipe.pk %}" class="btn btn-secondary ms-2">
+            Abbrechen
+        </a>
+    </form>
+</div>
+
+<!-- JavaScript -->
+<script src="{% static 'core/js/recipe_form.js' %}"></script>
+{% endblock %}

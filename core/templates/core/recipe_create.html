@@ -1,0 +1,336 @@
+{% extends "core/base.html" %}
+{% load static %}
+{% block content %}
+<div class="container my-4">
+    <h2>Neues Rezept anlegen</h2>
+
+    <!-- Scan-Bereich -->
+    <div class="mb-4 scan-box">
+        <h4>📷 Rezept automatisch auslesen</h4>
+        <p class="text-muted">Lade ein oder mehrere Fotos hoch (z.B. mehrere Buchseiten). Die Felder werden automatisch befüllt.</p>
+        <input type="file"
+            id="scan-image-input"
+            accept="image/*,application/pdf"
+            multiple
+            class="form-control mb-2">
+        <button type="button"
+            id="scan-btn"
+            class="btn btn-primary">
+            Scannen & Felder befüllen
+        </button>
+        <div id="scan-status" class="mt-2"></div>
+    </div>
+
+
+    <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        {{ form.non_field_errors }}
+
+        {% if form.errors or formset.errors or formset.non_form_errors or category_formset.errors or image_formset.errors %}
+            <div class="alert alert-danger">
+                <strong>Das Rezept konnte nicht gespeichert werden.</strong> Bitte rot markierte Felder prüfen:
+                <ul class="mb-0">
+                    {% for field in form %}
+                        {% for error in field.errors %}
+                            <li>{{ field.label }}: {{ error }}</li>
+                        {% endfor %}
+                    {% endfor %}
+                    {% for subform in formset %}
+                        {% for field, errors in subform.errors.items %}
+                            {% for error in errors %}
+                                <li>Zutat #{{ forloop.parentloop.counter }} - {{ field }}: {{ error }}</li>
+                            {% endfor %}
+                        {% endfor %}
+                    {% endfor %}
+                    {% for subform in category_formset %}
+                        {% for field, errors in subform.errors.items %}
+                            {% for error in errors %}
+                                <li>Kategorie #{{ forloop.parentloop.counter }} - {{ field }}: {{ error }}</li>
+                            {% endfor %}
+                        {% endfor %}
+                    {% endfor %}
+                </ul>
+            </div>
+        {% endif %}
+
+        <!-- Hauptformular -->
+
+        <!-- Rezeptfelder -->
+         <h4>{{ form.name.label}}</h4>
+        <div class="mb-3">
+            {{ form.name }}
+            {{ form.name.errors }}
+        </div>
+
+        <h4>{{ form.servings.label }}</h4>
+        <div class="mb-3">
+            {{ form.servings }}
+        </div>
+
+        <hr>
+
+        <!-- Zutaten -->
+        <h4>Zutaten</h4>
+        {{ formset.management_form }}
+        <div class="table-responsive">
+        <table id="ingredient-table" class="table table-bordered table-sm">
+            <thead>
+                <tr>
+                    <th>Bestehende Zutat</th>
+                    <th>Neue Zutat</th>
+                    <th>Menge</th>
+                    <th>Einheit</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for subform in formset %}
+                <tr>
+                    <td>{{ subform.ingredient }}</td>
+                    <td>{{ subform.new_ingredient }}</td>
+                    <td>{{ subform.amount }}</td>
+                    <td>{{ subform.unit }}</td>
+                    <td>
+                    <div style="display:none;">{{ subform.DELETE }}</div>
+                    <button type="button" class="remove-row btn btn-danger">-</button>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        </div>
+        <!-- Vorlage für neue Zeilen -->
+        <table style="display:none">
+            <tbody id="empty-form-template">
+                <tr>
+                    <td>{{ formset.empty_form.ingredient }}</td>
+                    <td>{{ formset.empty_form.new_ingredient }}</td>
+                    <td>{{ formset.empty_form.amount }}</td>
+                    <td>{{ formset.empty_form.unit }}</td>
+                    <td>
+                        <div style="display:none;">{{ formset.empty_form.DELETE }}</div>
+                        <button type="button" class="remove-row btn btn-danger">-</button>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+
+        <button type="button" id="add-row" class="btn btn-primary">+ Zutat hinzufügen</button>
+
+        <hr>
+
+        <!-- Restliches Rezeptformular -->
+        <h4>{{ form.instructions.label }}</h4>
+        <div class="mb-3">
+            {{ form.instructions }}
+        </div>
+        <h4>{{ form.preparation_length.label }}</h4>
+        <div class="mb-3">
+            {{ form.preparation_length }}
+        </div>
+
+        <!-- Bilder -->
+        <h4>Bilder</h4>
+        <input type="hidden" id="scanned_image_path" name="scanned_image_path" value="">
+        <div id="scan-image-preview" class="mb-2"></div>
+        {{ image_formset.management_form }}
+        <div id="image-formset-container">
+            {% for imgform in image_formset %}
+            <div class="image-form-row d-flex align-items-center gap-2 mb-2 p-2 border rounded">
+                {{ imgform.id }}
+                <div class="flex-grow-1">{{ imgform.image }}</div>
+                <div class="form-check text-nowrap">
+                    {{ imgform.is_title }}
+                    <label class="form-check-label ms-1">Titelbild</label>
+                </div>
+                <div style="display:none;">{{ imgform.DELETE }}</div>
+                <button type="button" class="btn btn-link p-0 text-danger remove-image-row" title="Entfernen">
+                    <i class="bi bi-trash"></i>
+                </button>
+            </div>
+            {% endfor %}
+        </div>
+        <div style="display:none;" id="empty-image-template">
+            <div class="image-form-row d-flex align-items-center gap-2 mb-2 p-2 border rounded">
+                {{ image_formset.empty_form.id }}
+                <div class="flex-grow-1">{{ image_formset.empty_form.image }}</div>
+                <div class="form-check text-nowrap">
+                    {{ image_formset.empty_form.is_title }}
+                    <label class="form-check-label ms-1">Titelbild</label>
+                </div>
+                <div style="display:none;">{{ image_formset.empty_form.DELETE }}</div>
+                <button type="button" class="btn btn-link p-0 text-danger remove-image-row" title="Entfernen">
+                    <i class="bi bi-trash"></i>
+                </button>
+            </div>
+        </div>
+        <button type="button" id="add-image-row" class="btn btn-secondary btn-sm mb-3">
+            <i class="bi bi-plus-lg me-1"></i> Bild hinzufügen
+        </button>
+
+        <!-- Kategorien -->
+        <h4>Kategorien</h4>
+        {{ category_formset.management_form }}
+        <div class="table-responsive">
+        <table id="category-table" class="table table-bordered table-sm">
+            <thead>
+                <tr>
+                    <th>Bestehende Kategorie</th>
+                    <th>Neue Kategorie</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for catform in category_formset %}
+                <tr>
+                    <td>{{ catform.category }}</td>
+                    <td>{{ catform.new_category }}</td>
+                    <td>
+                        <div style="display:none;">{{ catform.DELETE }}</div>
+                        <button type="button"
+                            class="remove-cat-row btn btn-danger">
+                            -
+                        </button>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        </div>
+
+        <!-- Vorlage für neue Kategorie-Zeilen -->
+        <table style="display:none">
+            <tbody id="empty-category-template">
+                <tr>
+                    <td>{{ category_formset.empty_form.category }}</td>
+                    <td>{{ category_formset.empty_form.new_category }}</td>
+                    <td>
+                        <div style="display:none;">{{ category_formset.empty_form.DELETE }}</div>
+                        <button type="button"
+                            class="remove-cat-row btn btn-danger">
+                            -
+                        </button>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+
+        <button type="button"
+            id="add-cat-row"
+            class="btn btn-primary">
+            + Kategorie hinzufügen
+        </button>
+
+        <h4>{{ form.rating.label }}</h4>
+
+        <div class="mb-3">
+            {{ form.rating }}
+        </div>
+
+        <button type="submit"
+            class="btn btn-success">
+            Rezept speichern
+        </button>
+    </form>
+</div>
+
+<!-- JavaScript -->
+ <script>
+document.addEventListener("DOMContentLoaded", function() {
+
+    // === Scan-Funktion ===
+    document.getElementById("scan-btn").addEventListener("click", function () {
+        const fileInput = document.getElementById("scan-image-input");
+        const statusDiv = document.getElementById("scan-status");
+
+        if (!fileInput.files.length) {
+            statusDiv.innerHTML = '<span class="text-danger">Bitte zuerst ein Bild auswählen.</span>';
+            return;
+        }
+
+        statusDiv.innerHTML = '<span class="text-muted">⏳ Wird ausgelesen...</span>';
+
+        const formData = new FormData();
+        for (const file of fileInput.files) {
+            formData.append("image", file);
+        }
+        formData.append("csrfmiddlewaretoken", "{{ csrf_token }}");
+
+        fetch("{% url 'core:recipe_scan' %}", {
+            method: "POST",
+            body: formData
+        })
+        .then(res => res.json())
+        .then(json => {
+            if (!json || json.error) {
+                statusDiv.innerHTML = `<span class="text-danger">Fehler: ${json.error}</span>`;
+                return;
+            }
+
+            const d = json.data;
+            if (!d) {
+                statusDiv.innerHTML = '<span class="text-danger">Fehler: Keine Daten vom Server erhalten.</span>';
+                return;
+            }
+
+            // Hauptfelder befüllen
+            document.getElementById("id_name").value = d.name || "";
+            document.getElementById("id_servings").value = d.servings || 2;
+            document.getElementById("id_preparation_length").value = d.preparation_length || 0;
+            document.getElementById("id_instructions").value = d.instructions || "";
+            document.getElementById("id_rating").value = d.rating || 2;
+
+            // Bild-Pfad ins Hidden-Field schreiben + Vorschau zeigen
+            if (d.image) {
+                document.getElementById("scanned_image_path").value = d.image;
+                document.getElementById("scan-image-preview").innerHTML =
+                    `<img src="/media/${d.image}" class="img-thumbnail mt-2" style="max-height:200px;" alt="Rezeptbild">`;
+            }
+
+            // Kategorien über Formset befüllen
+            const scanCatTableBody = document.querySelector("#category-table tbody");
+            const scanTotalCatForms = document.getElementById("id_categories-TOTAL_FORMS");
+            const scanEmptyCatTemplate = document.querySelector("#empty-category-template tr");
+
+            (d.categories || []).forEach((catName) => {
+            const formCount = parseInt(scanTotalCatForms.value);
+            let newRowHtml = scanEmptyCatTemplate.outerHTML.replace(/__prefix__/g, formCount);
+            scanCatTableBody.insertAdjacentHTML("beforeend", newRowHtml);
+
+            const rows = scanCatTableBody.querySelectorAll("tr");
+            const newRow = rows[rows.length - 1];
+
+            // Kategoriename ins "Neue Kategorie"-Textfeld eintragen
+            newRow.querySelector('input[name$="new_category"]').value = catName || "";
+
+            scanTotalCatForms.value = formCount + 1;
+            });
+
+            // Zutaten-Zeilen befüllen
+            const scanTableBody = document.querySelector("#ingredient-table tbody");
+            const scanTotalForms = document.getElementById("id_recipe_ingredients-TOTAL_FORMS");
+            const scanEmptyTemplate = document.querySelector("#empty-form-template tr");
+
+            (d.ingredients || []).forEach((ing) => {
+                const formCount = parseInt(scanTotalForms.value);
+                let newRowHtml = scanEmptyTemplate.outerHTML.replace(/__prefix__/g, formCount);
+                scanTableBody.insertAdjacentHTML("beforeend", newRowHtml);
+
+                const rows = scanTableBody.querySelectorAll("tr");
+                const newRow = rows[rows.length - 1];
+
+                newRow.querySelector('input[name$="new_ingredient"]').value = ing.name || "";
+                newRow.querySelector('input[name$="amount"]').value = ing.amount ?? "";
+                newRow.querySelector('input[name$="unit"]').value = ing.unit || "";
+
+                scanTotalForms.value = formCount + 1;
+            });
+
+            statusDiv.innerHTML = '<span class="text-success">✅ Felder wurden befüllt. Bitte prüfen!</span>';
+        })
+        .catch(err => {
+            statusDiv.innerHTML = `<span class="text-danger">Netzwerkfehler: ${err}</span>`;
+        });
+    });
+});
+</script>
+<script src="{% static 'core/js/recipe_form.js' %}"></script>
+{% endblock %}

@@ -1,0 +1,15 @@
+{% extends "core/base.html" %}
+{% block content %}
+<div class="container my-4">
+    <h2>Rezepte in Kategorie: {{ category.name }}</h2>
+    <div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-4 g-4">
+        {% for recipe in recipes %}
+            {% include "core/_recipe_card.html" with show_edit=False %}
+        {% empty %}
+            <div class="col">
+                <p>Keine Rezepte in dieser Kategorie vorhanden.</p>
+            </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

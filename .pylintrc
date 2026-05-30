@@ -1,0 +1,20 @@
+[MASTER]
+load-plugins = pylint_django
+django-settings-module = config.settings
+ignore = migrations,tests
+ignore-patterns = core/migrations/*.py,core/tests/*.py
+jobs = 1
+init-hook = 'import sys; sys.path.insert(0, ".")'
+
+[MESSAGES CONTROL]
+disable =
+    missing-docstring,
+    too-many-ancestors
+
+[FORMAT]
+max-line-length = 100
+
+good-names = pk,id,qs,_,app_name
+
+[TYPECHECK]
+generated-members = objects, DoesNotExist, MultipleObjectsReturned

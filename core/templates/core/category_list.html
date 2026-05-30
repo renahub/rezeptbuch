@@ -1,0 +1,115 @@
+{% extends "core/base.html" %}
+{% load static %}
+{% block content %}
+<h2>Kategorien entdecken</h2>
+
+{% if messages %}
+    {% for message in messages %}
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    {% endfor %}
+{% endif %}
+
+<div class="container-fluid">
+    <div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-4 g-4">
+        {% for category in categories %}
+        <div class="col">
+            <div class="card h-100 shadow-sm text-center">
+                <a href="{% url 'core:recipe_category' category.id %}" class="text-decoration-none text-dark">
+                    {% if category.image %}
+                        <img src="{{ category.image.url }}"
+                            class="card-img-top img-fluid"
+                            alt="{{ category.name }}"
+                            style="height: 180px; object-fit: cover;">
+                    {% else %}
+                        <img src="{% static 'core/images/placeholder.jpg' %}"
+                            class="card-img-top img-fluid"
+                            alt="Kein Bild vorhanden"
+                            style="height: 180px; object-fit: cover;">
+                    {% endif %}
+                </a>
+                <div class="card-body d-flex align-items-center justify-content-center gap-2">
+                    <a href="{% url 'core:recipe_category' category.id %}" class="text-decoration-none text-dark">
+                        <h5 class="card-title mb-0">{{ category.name }}</h5>
+                    </a>
+                    <button type="button"
+                            class="btn btn-link p-0 text-secondary"
+                            title="Bearbeiten"
+                            data-bs-toggle="modal"
+                            data-bs-target="#renameModal"
+                            data-category-name="{{ category.name }}"
+                            data-rename-url="{% url 'core:category_rename' category.id %}"
+                            data-category-image="{% if category.image %}{{ category.image.url }}{% endif %}">
+                        <i class="bi bi-pencil" style="font-size: 0.9rem;"></i>
+                    </button>
+                    <a href="{% url 'core:category_delete' category.pk %}"
+                       class="btn btn-link p-0 text-danger"
+                       title="Löschen">
+                        <i class="bi bi-trash" style="font-size: 0.9rem;"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- Bearbeiten-Modal -->
+<div class="modal fade" id="renameModal" tabindex="-1" aria-labelledby="renameModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="renameModalLabel">Kategorie bearbeiten</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="post" id="renameForm" action="" enctype="multipart/form-data">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="renameInput" class="form-label fw-semibold">Name</label>
+                        <input type="text" name="name" id="renameInput" class="form-control" required>
+                    </div>
+                    <div class="mb-2">
+                        <label for="categoryImageInput" class="form-label fw-semibold">Bild ersetzen</label>
+                        <div id="categoryImagePreviewWrapper" class="mb-2 d-none">
+                            <img id="categoryCurrentImage" src="" alt="Aktuelles Bild"
+                                 class="img-fluid rounded" style="max-height: 160px; object-fit: cover;">
+                        </div>
+                        <input type="file" name="image" id="categoryImageInput"
+                               class="form-control" accept="image/*">
+                        <div class="form-text">Nur hochladen, wenn du das Bild ersetzen möchtest.</div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Abbrechen</button>
+                    <button type="submit" class="btn btn-primary">Speichern</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    const renameModal = document.getElementById('renameModal');
+    renameModal.addEventListener('show.bs.modal', function (event) {
+        const btn = event.relatedTarget;
+        document.getElementById('renameInput').value = btn.getAttribute('data-category-name');
+        document.getElementById('renameForm').action = btn.getAttribute('data-rename-url');
+
+        const imageUrl = btn.getAttribute('data-category-image');
+        const previewWrapper = document.getElementById('categoryImagePreviewWrapper');
+        const previewImg = document.getElementById('categoryCurrentImage');
+        if (imageUrl) {
+            previewImg.src = imageUrl;
+            previewWrapper.classList.remove('d-none');
+        } else {
+            previewWrapper.classList.add('d-none');
+        }
+
+        // Datei-Input zurücksetzen
+        document.getElementById('categoryImageInput').value = '';
+    });
+</script>
+{% endblock %}

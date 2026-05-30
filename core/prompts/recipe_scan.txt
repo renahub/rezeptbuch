@@ -1,0 +1,84 @@
+Du siehst ein Foto oder einen Scan eines Kochrezepts. Es können mehrere Seiten/Bilder sein.
+
+AUFGABE 1: Rezeptdaten extrahieren:
+Extrahiere die Informationen.
+- Handschriftliche Notizen (Korrekturen, Streichungen, Randbemerkungen,
+  Pfeile, überschriebene Werte) haben IMMER Vorrang vor dem gedruckten
+  Text. Sie sind persönliche Anpassungen der Köchin und gelten als die
+  aktuelle Version des Rezepts.
+  Beispiele:
+  • Gedruckt "200 g Mehl", handschriftlich "250" daneben/darüber
+    → übernimm 250 g Mehl.
+  • Gedruckt "30 Minuten" durchgestrichen, handschriftlich "45"
+    → übernimm 45 Minuten.
+  • Eine Zutat komplett durchgestrichen (ohne Ersatz)
+    → lass sie weg.
+  • Handschriftlicher Zusatz ohne Streichung (z.B. "+ 1 TL Zimt")
+    → als zusätzliche Zutat oder zusätzlichen Schritt aufnehmen.
+  Wenn der handschriftliche Text unleserlich ist, behalte den gedruckten
+  Wert und ignoriere die Notiz.
+- Zutaten, Mengen und Einheiten: exakt aus der Vorlage übernehmen.
+- Reihenfolge und Anzahl der Zubereitungsschritte: exakt beibehalten.
+- Wortlaut der Zubereitungsschritte: in eigenen Worten leicht umformulieren
+  (gleicher Inhalt, andere Wortwahl und Satzstellung). Der Sinn soll
+  nicht verändert werden.
+- OCR-Fehler korrigieren (z.B. „rn" statt „m", verstümmelte Umlaute),
+  Zeilenumbrüche mitten im Satz entfernen.
+
+AUFGABE 2: Rezeptbild identifizieren und ausschneiden:
+Prüfe, ob eines der Bilder ein Foto des fertigen Gerichts enthält
+(also ein appetitliches Bild des zubereiteten Essens, kein reiner Text-Scan).
+Falls ja, gib zurück:
+- "dish_image_index": Index des Bildes (0-basiert)
+- "dish_image_bbox": Bounding-Box NUR des Gerichts-Fotos (ohne umgebenden
+  Text, ohne Seitenrand), im Format [ymin, xmin, ymax, xmax], normalisiert
+  auf 0-1000 (also relative Position im Bild, nicht Pixel).
+  Beispiel: [120, 250, 580, 780] für ein Foto links oben bis Bildmitte.
+Falls kein Gericht-Foto vorhanden ist, setze beide Felder auf null.
+
+Antworte NUR mit einem JSON-Objekt, kein Markdown, kein Text drumherum:
+{
+  "name": "Rezeptname",
+  "servings": 4,
+  "preparation_length": 30,
+  "instructions": "Zubereitungsschritte wortgetreu aus der Vorlage...",
+  "rating": 2,
+  "categories": ["Hauptgericht", "Italienisch"],
+  "dish_image_index": 0,
+  "dish_image_bbox": [120, 250, 580, 780],
+  "ingredients": [
+    {"name": "Mehl", "amount": 200.0, "unit": "g"},
+    {"name": "Salz", "amount": 0, "unit": "nach Bedarf"}
+  ]
+}
+
+Wichtige Regeln:
+- rating: Setze rating immer auf 2.
+- amount: immer eine Dezimalzahl (z.B. 0.5 für eine halbe Menge).
+- unit: Niemals leer lassen. Bei Zutaten ohne klare Einheit
+  (Salz, Pfeffer, Gewürze nach Geschmack): unit auf "nach Bedarf"
+  setzen. Bei Stückangaben ohne Einheit: "Stk".
+- Falls eine Menge im Bild nicht erkennbar ist oder die Einheit
+  "nach Bedarf" lautet: amount auf 0 setzen (nicht null).
+- categories: Schlage 1-3 passende Kategorien frei vor, die den Inhalt des Rezepts
+  treffend beschreiben (z.B. Gerichtsart, Küche, Dauer).
+  Verwende kurze, einheitliche deutsche Begriffe.
+- instructions-Format: Nummeriere die Zubereitungsschritte fortlaufend
+  (1., 2., 3., ...) und trenne sie jeweils mit einem Zeilenumbruch (\n).
+  Übernimm vorhandene Nummerierung der Vorlage; falls die Vorlage nicht
+  nummeriert ist (z.B. Fließtext), identifiziere selbst sinnvolle
+  Einzelschritte und nummeriere sie. Bei sehr kurzen Rezepten mit nur
+  einem Schritt darf die Nummer entfallen.
+  Nach einem Satzende (. ! ?) folgt nie ein Komma.
+  Falsch: "Mehl sieben., Salz dazu."
+  Richtig: "1. Mehl sieben.\n2. Salz dazu.\n3. Backen."
+- Falls servings fehlt: 2.
+- Falls preparation_length fehlt: schätze grob aus den Schritten
+  (5-Minuten-Raster), keine null.
+- Zutaten-Namen: Nur der Grundname (z.B. "Tomaten"), keine
+  Zubereitungshinweise ("gehackt", "kalt"), keine Klammerzusätze
+  ("(für Teig)"), keine Mengenangaben im Namen.
+- Antworte immer auf Deutsch, auch wenn das Rezept fremdsprachig ist.
+  Übersetze Zutaten- und Kategorienamen.
+- Falls die Vorlage mehrere Rezepte enthält, extrahiere nur das erste
+  (oberste/größte) und ignoriere die übrigen.

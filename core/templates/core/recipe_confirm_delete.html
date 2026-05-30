@@ -1,0 +1,24 @@
+{% extends "core/base.html" %}
+{% block content %}
+<div class="container my-4">
+    <div class="card border-danger" style="max-width: 500px;">
+        <div class="card-header bg-danger text-white">
+            <h5 class="mb-0">Rezept löschen</h5>
+        </div>
+        <div class="card-body">
+            <p>Möchtest du <strong>„{{ object.name }}"</strong> wirklich unwiderruflich löschen?</p>
+            <form method="post">
+                {% csrf_token %}
+                <a href="{% url 'core:recipe' object.pk %}" 
+                    class="btn btn-secondary">
+                    Abbrechen
+                </a>
+                <button type="submit"
+                    class="btn btn-danger ms-2">
+                    Ja, löschen
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

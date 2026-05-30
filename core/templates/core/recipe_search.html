@@ -1,0 +1,75 @@
+{% extends "core/base.html" %}
+{% load static %}
+{% block content %}
+
+<h2>Suche &amp; Filter</h2>
+
+<form method="get" action="{% url 'core:recipe_search' %}" class="mb-4">
+    <div class="card shadow-sm">
+        <div class="card-body">
+            <div class="row g-3 align-items-start">
+
+                <div class="col-12 col-md-4">
+                    <label for="q" class="form-label fw-semibold">Stichwort</label>
+                    <input type="text" id="q" name="q" value="{{ query }}"
+                           class="form-control" placeholder="Rezept, Zutat, Kategorie …">
+                    <div class="form-text">Mehrere Begriffe mit Komma oder Leerzeichen trennen</div>
+                </div>
+
+                <div class="col-12 col-md-4">
+                    <label class="form-label fw-semibold">Kategorie</label>
+                    <div class="border rounded p-2" style="max-height: 160px; overflow-y: auto;">
+                        {% for cat in all_categories %}
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox"
+                                   name="category" value="{{ cat.id }}"
+                                   id="cat_{{ cat.id }}"
+                                   {% if cat.id in selected_categories %}checked{% endif %}>
+                            <label class="form-check-label" for="cat_{{ cat.id }}">{{ cat.name }}</label>
+                        </div>
+                        {% empty %}
+                        <span class="text-muted small">Keine Kategorien vorhanden</span>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <div class="col-12 col-md-2">
+                    <label for="max_time" class="form-label fw-semibold">Max. Zubereitungszeit</label>
+                    <div class="input-group">
+                        <input type="number" id="max_time" name="max_time" value="{{ max_time }}"
+                               min="1" class="form-control" placeholder="30">
+                        <span class="input-group-text">Min.</span>
+                    </div>
+                </div>
+
+                <div class="col-12 col-md-2 d-flex flex-column gap-2" style="padding-top: 1.9rem;">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-funnel"></i> Filtern
+                    </button>
+                    {% if has_filters %}
+                    <a href="{% url 'core:recipe_search' %}" class="btn btn-outline-secondary btn-sm">
+                        <i class="bi bi-x-lg"></i> Filter zurücksetzen
+                    </a>
+                    {% endif %}
+                </div>
+
+            </div>
+        </div>
+    </div>
+</form>
+
+{% if not has_filters %}
+    <p class="text-muted">Gib einen Suchbegriff ein oder wähle Filter aus.</p>
+
+{% elif not recipes %}
+    <p>Keine Rezepte gefunden.</p>
+
+{% else %}
+<p class="text-muted small mb-3">{{ recipes|length }} Rezept{{ recipes|length|pluralize:",e" }} gefunden</p>
+<div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-4 g-4">
+    {% for recipe in recipes %}
+        {% include "core/_recipe_card.html" with show_edit=True %}
+    {% endfor %}
+</div>
+{% endif %}
+{% endblock %}

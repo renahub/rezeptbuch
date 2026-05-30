@@ -1,0 +1,194 @@
+{% extends "core/base.html" %}
+{% load static %}
+{% block content %}
+<div class="container my-4">
+    <div class="row">
+        <div class="col-md-7">
+            <h1 class="mb-3">{{ recipe.name }}</h1>
+            <p class="text-muted">
+                {% for category in recipe.categories.all %}
+                    <span class="badge bg-secondary">{{ category.name }}</span>
+                {% endfor %}
+            </p>
+            <p>
+                <strong>Zubereitungszeit:</strong> {{ recipe.preparation_length }} Minuten
+            </p>
+
+            <!-- Portionen-Regler -->
+            <div class="mb-3">
+                <span id="base-servings" data-value="{{ recipe.servings }}" style="display:none"></span>
+                <strong>Portionen:</strong>
+                <div class="d-flex align-items-center gap-2 mt-1">
+                    <button type="button" id="decrease-btn" class="btn btn-outline-secondary btn-sm">−</button>
+                    <span id="serving-display">{{ recipe.servings }}</span>
+                    <button type="button" id="increase-btn" class="btn btn-outline-secondary btn-sm">+</button>
+                    <small class="text-muted ms-2">(Originalrezept für {{ recipe.servings }} Portionen)</small>
+                </div>
+            </div>
+
+            <!-- Zutatenliste -->
+            <h4>Zutaten</h4>
+            <ul>
+                {% for recipeIngredient in recipe.recipe_ingredients.all %}
+                    <li>
+                        <span class="ingredient-amount"
+                            data-base-amount="{{ recipeIngredient.amount }}">
+                            {{ recipeIngredient.amount|floatformat }}
+                        </span>
+                        {{ recipeIngredient.unit }}
+                        {{ recipeIngredient.ingredient.name }}
+                    </li>
+                {% empty %}
+                    <li>Zutatenliste folgt...</li>
+                {% endfor %}
+            </ul>
+
+            <!-- Zubereitung -->
+            <h4>Zubereitung</h4>
+            <p>{{ recipe.instructions|linebreaks }}</p>
+        </div>
+        <div class="col-md-5">
+            {% if images %}
+                <div id="recipeCarousel" class="carousel slide rounded shadow" data-bs-ride="false">
+                    <div class="carousel-inner">
+                        {% for img in images %}
+                        <div class="carousel-item {% if forloop.first %}active{% endif %}">
+                            <img src="{{ img.image.url }}"
+                                 class="d-block w-100"
+                                 alt="{{ recipe.name }}"
+                                 style="height: 380px; object-fit: cover;">
+                        </div>
+                        {% endfor %}
+                    </div>
+                    <div class="position-absolute bottom-0 end-0 m-2">
+                        <span class="badge bg-dark bg-opacity-75">
+                            <span id="carousel-current">1</span> / {{ images|length }}
+                        </span>
+                    </div>
+                    {% if images|length > 1 %}
+                    <button class="carousel-control-prev" type="button"
+                            data-bs-target="#recipeCarousel" data-bs-slide="prev">
+                        <span class="carousel-control-prev-icon"></span>
+                        <span class="visually-hidden">Zurück</span>
+                    </button>
+                    <button class="carousel-control-next" type="button"
+                            data-bs-target="#recipeCarousel" data-bs-slide="next">
+                        <span class="carousel-control-next-icon"></span>
+                        <span class="visually-hidden">Weiter</span>
+                    </button>
+                    {% endif %}
+                </div>
+            {% else %}
+                <img src="{% static 'core/images/placeholder.jpg' %}"
+                     class="img-fluid rounded shadow"
+                     alt="Kein Bild vorhanden">
+            {% endif %}
+
+            <!-- Bild hochladen -->
+            <div class="mt-3 scan-box">
+                <form method="post"
+                      action="{% url 'core:recipe_image_upload' recipe.pk %}"
+                      enctype="multipart/form-data">
+                    {% csrf_token %}
+                    <input type="file"
+                           name="image"
+                           accept="image/*"
+                           class="form-control mb-2">
+                    <button type="submit" class="btn btn-success">
+                        Bild speichern
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mt-4">
+        <div class="col">
+            <h5>Bewertung</h5>
+            <p>
+                <span class="rating-stars">
+                    {% if recipe.rating >= 1 %}<span class="rating-star-active">★</span>{% else %}<span class="rating-star-inactive">★</span>{% endif %}
+                    {% if recipe.rating >= 2 %}<span class="rating-star-active">★</span>{% else %}<span class="rating-star-inactive">★</span>{% endif %}
+                    {% if recipe.rating >= 3 %}<span class="rating-star-active">★</span>{% else %}<span class="rating-star-inactive">★</span>{% endif %}
+                </span>
+                <span class="ms-2 text-muted">{{ recipe.get_rating_display }}</span>
+            </p>
+        </div>
+    </div>
+
+    <!-- Buttons -->
+    <div class="row mt-3">
+        <div class="col d-flex gap-2 flex-wrap">
+            <a href="{% url 'core:recipe_edit' recipe.pk %}"
+                class="btn btn-outline-secondary">
+                ✏️ Bearbeiten
+            </a>
+            <a href="{% url 'core:recipe_delete' recipe.pk %}"
+                class="btn btn-outline-danger">
+                🗑 Löschen
+            </a>
+            <form method="post"
+                action="{% url 'core:cart_add' recipe.pk %}"
+                class="d-inline">
+                {% csrf_token %}
+                <input type="hidden"
+                    name="servings"
+                    id="cart-servings-input"
+                    value="{{ recipe.servings }}">
+                <button type="submit"
+                    class="btn btn-warning">
+                    🛒 Zur Einkaufsliste
+                    (<span id="cart-serving-preview">{{ recipe.servings }}</span> Port.)
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    const baseServings = parseInt(document.getElementById("base-servings").dataset.value);
+    let currentServings = baseServings;
+
+    const servingDisplay = document.getElementById("serving-display");
+    const amountCells = document.querySelectorAll(".ingredient-amount");
+
+    function updateAmounts() {
+        const factor = currentServings / baseServings;
+        amountCells.forEach(function(cell) {
+            const base = parseFloat(cell.dataset.baseAmount);
+            const newAmount = base * factor;
+            cell.textContent = Number.isInteger(newAmount)
+                ? newAmount
+                : parseFloat(newAmount.toFixed(1));
+        });
+        servingDisplay.textContent = currentServings;
+
+        // Warenkorb-Formular synchronisieren
+        document.getElementById("cart-servings-input").value = currentServings;
+        document.getElementById("cart-serving-preview").textContent = currentServings;
+    }
+
+    document.getElementById("decrease-btn").addEventListener("click", function () {
+        if (currentServings > 1) {
+            currentServings--;
+            updateAmounts();
+        }
+    });
+
+    document.getElementById("increase-btn").addEventListener("click", function () {
+        currentServings++;
+        updateAmounts();
+    });
+
+    // Carousel-Zähler
+    const carousel = document.getElementById('recipeCarousel');
+    if (carousel) {
+        carousel.addEventListener('slid.bs.carousel', function (e) {
+            document.getElementById('carousel-current').textContent = e.to + 1;
+        });
+    }
+});
+</script>
+
+{% endblock %}

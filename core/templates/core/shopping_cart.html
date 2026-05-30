@@ -1,0 +1,125 @@
+{% extends "core/base.html" %}
+{% block content %}
+<div class="container my-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2>🛒 Einkaufsliste</h2>
+        <div class="d-flex gap-2 flex-wrap">
+            <button onclick="copyList()"
+                    class="btn btn-outline-secondary btn-sm">
+                    📋 Kopieren
+            </button>
+            <button onclick="downloadList()"
+                    class="btn btn-outline-primary btn-sm">
+                    ⬇ .txt herunterladen
+            </button>
+            <form method="post"
+                  action="{% url 'core:cart_clear' %}">
+                {% csrf_token %}
+                <button type="submit"
+                        class="btn btn-outline-danger btn-sm"
+                        onclick="return confirm('Gesamte Einkaufsliste löschen?')">
+                        🗑 Gesamte Liste löschen
+                </button>
+            </form>
+        </div>
+    </div>
+
+    {% if shopping_list %}
+    <p class="text-muted">
+        Zutaten die du bereits zu Hause hast kannst du mit <strong>✕ entfernen</strong>.
+        Danach die Liste exportieren oder kopieren.
+    </p>
+
+    <ul class="list-group mb-4" id="shopping-list-output">
+        {% for item in shopping_list %}
+        <li class="list-group-item d-flex justify-content-between align-items-center">
+            <div>
+                <strong>{{ item.name }}</strong>
+                <span class="ms-2">{{ item.amount|floatformat }} {{ item.unit }}</span>
+                <br>
+                <small class="text-muted">aus: {{ item.recipes|join:", " }}</small>
+            </div>
+
+            <!-- Einzeln löschen -->
+            <button class="btn btn-sm btn-outline-danger delete-btn"
+                    data-name="{{ item.name }}"
+                    data-unit="{{ item.unit }}"
+                    title="Zutat entfernen (schon zu Hause)">
+                ✕ schon zu Hause
+            </button>
+        </li>
+        {% endfor %}
+    </ul>
+
+    {% else %}
+    <div class="alert alert-info">
+        Deine Einkaufsliste ist leer.
+        Geh zu einem <a href="{% url 'core:recipe_list' %}">Rezept</a>
+        und klicke „Zur Einkaufsliste".
+    </div>
+    {% endif %}
+
+</div>
+
+<script>
+const csrfToken = "{{ csrf_token }}";
+
+// AJAX-Löschen ohne Seitenreload
+document.addEventListener("click", function(e) {
+    const btn = e.target.closest(".delete-btn");
+    if (!btn) return;
+
+    const name = btn.dataset.name;
+    const unit = btn.dataset.unit;
+    const listItem = btn.closest("li");
+
+    fetch("{% url 'core:cart_item_delete' %}", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/x-www-form-urlencoded",
+            "X-CSRFToken": csrfToken,
+        },
+        body: `name=${encodeURIComponent(name)}&unit=${encodeURIComponent(unit)}`
+    })
+    .then(res => {
+        if (res.ok || res.redirected) {
+            // Zeile direkt aus dem DOM entfernen, kein Reload
+            listItem.remove();
+
+            // Falls Liste jetzt leer ist
+            const list = document.getElementById("shopping-list-output");
+            if (list && list.querySelectorAll("li").length === 0) {
+                list.innerHTML = "";
+                document.querySelector(".container").innerHTML += `
+                    <div class="alert alert-info">
+                        Deine Einkaufsliste ist leer.
+                        Geh zu einem <a href="{% url 'core:recipe_list' %}">Rezept</a>
+                        und klicke „Zur Einkaufsliste".
+                    </div>`;
+            }
+        }
+    })
+    .catch(err => console.error("Fehler beim Löschen:", err));
+});
+
+function getListText() {
+    const items = document.querySelectorAll("#shopping-list-output li");
+    return [...items].map(li => {
+        const name = li.querySelector("strong").textContent.trim();
+        const rest = li.querySelector("strong + span").textContent.trim();
+        return `${name}: ${rest}`;
+    }).join("\n");
+}
+function copyList() {
+    navigator.clipboard.writeText(getListText())
+        .then(() => alert("✅ Einkaufsliste kopiert!"));
+}
+function downloadList() {
+    const blob = new Blob([getListText()], {type: "text/plain;charset=utf-8"});
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "einkaufsliste.txt";
+    a.click();
+}
+</script>
+{% endblock %}
